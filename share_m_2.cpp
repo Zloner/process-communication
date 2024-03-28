@@ -19,6 +19,7 @@ int main(){
     }
 
     char * shmadd = (char*)shmat(shmid, NULL, 0);
+    printf("%p", shmadd);
     if(shmadd < 0){
         perror("shmat");
         return 1;

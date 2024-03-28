@@ -46,7 +46,7 @@ int main(){
     if(id == 0){
         while(1){
             if(SemPV(semid, 0, -1) < 0){
-                perror("p");
+                printf("p");
                 return 1;
             }
             sleep(2);
@@ -65,7 +65,7 @@ int main(){
     else{
         while(1){
             if(SemPV(semid, 0, -1) < 0){
-                perror("p");
+                printf("p");
                 return 1;
             }
             sleep(2);

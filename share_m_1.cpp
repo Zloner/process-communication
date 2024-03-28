@@ -18,12 +18,13 @@ int main(){
     }
 
     char* addr = (char*)shmat(shmid, NULL, 0);
+    printf("%p", addr);
     if(addr == (char*)-1){
         perror("shmat");
         return 1;
     }
 
     memset(addr, 0, 4096);
-    strcpy(addr, "hello world");
+    fgets(addr, 64, stdin);
     return 0;
 }

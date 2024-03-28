@@ -12,15 +12,15 @@ int main(int argc, const char * argv[]){
         exit(1);
     }
 
-    int ret = access(argv[1], F_OK);
+    int ret = access("./np1", F_OK);
     if(ret == -1){
-        int r = mkfifo(argv[1], 0777);
+        int r = mkfifo("./np1", 0777);
 
         if(r == -1){printf("make fifo erro.\n"); exit(1);}
         printf("fifo is created successfully\n");
     }
 
-    int fd = open(argv[1], O_WRONLY);
+    int fd = open("./np1", O_WRONLY);
     if(fd == -1){
         perror("open error\n");
         exit(1);

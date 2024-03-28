@@ -89,7 +89,7 @@ int main(){
 
     int res = pthread_create(&id1, 0, write1, 0);
     if(res == -1){
-        printf("thread 1 created error\n");
+        printf("thread 1 create error\n");
         exit(-1);
     }
 
