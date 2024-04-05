@@ -1,5 +1,6 @@
 #include <iostream>
 #include <vector>
+#include <algorithm>
 #include <queue>
 #include <unistd.h>
 #include <time.h>
@@ -15,7 +16,7 @@ pthread_cond_t pcond = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t mutex_push = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_con = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_pop = PTHREAD_MUTEX_INITIALIZER;
-
+pthread_mutex_t mutex_wf = PTHREAD_MUTEX_INITIALIZER;
 
 int* createArr(int th_id){
     int * arr = (int*)malloc(sizeof(int) * 5);
@@ -57,6 +58,18 @@ void* consumer(void * arg){
             int* arr = qu.front();
             qu.pop();
             pthread_mutex_unlock(&mutex_pop);
+
+            sort(arr, arr + 5, greater<int>());
+
+            FILE* fw = NULL;
+            pthread_mutex_lock(&mutex_wf);
+            fw = fopen("result.txt", "a");
+            for(int i = 0; i < 5; i++){
+                fprintf(fw, "%d ", arr[i]);
+            }
+            fprintf(fw, "\n");
+            fclose(fw);
+            pthread_mutex_unlock(&mutex_wf);
             
             printf("thread %d print array: ", id);
             for(int i = 0; i < 5; i++){
@@ -73,6 +86,8 @@ void* consumer(void * arg){
 int main(){
     vector<pthread_t> idt;
     int res = 0;
+    FILE* f = fopen("result.txt", "w");
+    fclose(f);
 
     idt.resize(5);
     for(int i = 0; i < 2; i++){

@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <queue>
+#include <algorithm>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
@@ -13,6 +14,7 @@ using namespace std;
 sem_t product;
 pthread_mutex_t mutex_push = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_pop = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_wf = PTHREAD_MUTEX_INITIALIZER;
 queue<int*> qu;
 
 int* createArr(int th_id){
@@ -53,6 +55,18 @@ void * consumer(void * arg){
             qu.pop();
             pthread_mutex_unlock(&mutex_pop);
 
+            sort(arr, arr + 5, greater<int>());
+
+            FILE* fw = NULL;
+            pthread_mutex_lock(&mutex_wf);
+            fw = fopen("result.txt", "a");
+            for(int i = 0; i < 5; i++){
+                fprintf(fw, "%d ", arr[i]);
+            }
+            fprintf(fw, "\n");
+            fclose(fw);
+            pthread_mutex_unlock(&mutex_wf);
+
             printf("thread %d print array: ", id);
             for(int i = 0; i < 5; i++){
                 printf("%d ", arr[i]);
@@ -67,6 +81,8 @@ void * consumer(void * arg){
 int main(){
     vector<pthread_t> idt;
     int i, res;
+    FILE* f = fopen("result.txt", "w");
+    fclose(f);
 
     sem_init(&product, 0, 0);
 
