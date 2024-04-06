@@ -1,4 +1,7 @@
 #include <iostream>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/sem.h>
@@ -23,31 +26,36 @@ static int SemPV(int semid, int which, int _op){
 
 struct TNode{
     int data;
-    struct TNode* lchild;
-    struct TNode* rchild;
+    int offset;
+    long int lchild;
+    long int rchild;
 };
 typedef struct TNode TNode;
 typedef struct TNode* Tree;
 
-Tree createtree(void * & shmadd, Tree root, int * arr, int index){
+long int createtree(int & offset, Tree root, int * arr, int index){
     if(index > arr[0]){
-        return NULL;
+        return -1;
     }
-    root = (Tree)shmadd;
-    shmadd+=sizeof(TNode);
+
+    offset += 1;
+    root->offset = offset;
     root->data = arr[index];
-    root->lchild = createtree(shmadd, root->lchild, arr, index*2+1);
-    root->rchild = createtree(shmadd, root->rchild, arr, index*2+2);
-    return root;
+    root->lchild = createtree(offset, root+(offset+1-root->offset), arr, index*2+1);
+    root->rchild = createtree(offset, root+(offset+1-root->offset), arr, index*2+2);
+    return root->offset;
 }
 
 //preorder
-void showtree(Tree root){
-    if(root == NULL)
-        return;
+void showtree(Tree root, Tree tree){
+
     printf("%d ", root->data);
-    showtree(root->lchild);
-    showtree(root->rchild);
+    if(root->lchild != -1){
+        showtree(tree+root->lchild, tree);
+    }
+    if(root->rchild != -1){
+        showtree(tree+root->rchild, tree);
+    }
 }
 
 int main(){
@@ -94,9 +102,15 @@ int main(){
     //child
     else if(pid == 0){
         //recieve task
+
         SemPV(semid1, 0, -1);
 
-        void * shmadd = shmat(shmid, NULL, 0);
+        int shmid2 = shmget(key+1, 512, IPC_CREAT|0666);
+        void * shmadd2 = shmat(shmid2, 0, 0);
+
+        void * shmadd = shmat(shmid, 0, 0);
+        printf("shmadd1:%p, shmadd2:%p\n", shmadd, shmadd2);
+
         int * arr = (int*)shmadd;
         int len = *arr;
 
@@ -105,7 +119,9 @@ int main(){
         }
         shmadd += (len + 1) * sizeof(int);
 
-        Tree tree = createtree(shmadd, tree, arr, 0);
+        int offset = -1;
+        Tree tree = (Tree)shmadd;
+        createtree(offset, tree, arr, 0);
     
         printf("create tree success\n");
         
@@ -113,7 +129,10 @@ int main(){
     }
     //father
     else{
-        void* shmadd = shmat(shmid, NULL, 0);
+        void * shmadd = shmat(shmid, 0, 0);
+        printf("shmadd1:%p\n", shmadd);
+        memset(shmadd, 0, 512);
+        
         int len = 9;
         int * arr = (int*)shmadd;
         arr[0] = len;
@@ -126,7 +145,7 @@ int main(){
         shmadd+=(len+1) * sizeof(int);
         
         Tree tree = (Tree)shmadd;
-        showtree(tree);
+        showtree(tree, tree);
         printf("\n");
     }
 }
