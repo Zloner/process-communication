@@ -31,15 +31,17 @@ void* producer(void * arg){
     int id = (long int)arg;
     printf("thread(producer) %d start.\n", id);
     while(true){
+        int * arr = createArr(id);
+
+        pthread_mutex_lock(&mutex_push);
         if(qu.size() < MAX_SIZE){
-            int * arr = createArr(id);
-            pthread_mutex_lock(&mutex_push);
             qu.push(arr);
-            pthread_mutex_unlock(&mutex_push);
-            printf("thread id:%d create array\n");
-            sleep(1);
-            sem_post(&product);
         }
+        pthread_mutex_unlock(&mutex_push);
+
+        printf("thread id:%d create array\n");
+        sleep(1);
+        sem_post(&product);
     }
     return arg;
 }
@@ -49,12 +51,16 @@ void * consumer(void * arg){
     int* arr;
     printf("thread(consumer) %d start.\n", id);
     while(true){
+        int * arr = NULL;
+
+        pthread_mutex_lock(&mutex_pop);
         if(!qu.empty()){
-            pthread_mutex_lock(&mutex_pop);
             arr = qu.front();
             qu.pop();
-            pthread_mutex_unlock(&mutex_pop);
+        }
+        pthread_mutex_unlock(&mutex_pop);
 
+        if(arr != NULL){
             sort(arr, arr + 5, greater<int>());
 
             FILE* fw = NULL;
