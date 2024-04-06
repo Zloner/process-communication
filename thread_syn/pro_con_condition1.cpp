@@ -33,15 +33,15 @@ void* producer(void* arg){
     int id = (long int)arg;
     printf("thread(producer) %d start.\n", id);
     while(true){
-        while(qu.size() < MAX_QUEUE_SIZE){
+        pthread_mutex_lock(&mutex_push);
+        if(qu.size() < MAX_QUEUE_SIZE){
             int* arr = createArr(id);
-            pthread_mutex_lock(&mutex_push);
             qu.push(arr);
-            pthread_mutex_unlock(&mutex_push);
-            printf("thread id:%d create array\n", id);
-            sleep(1);
-            pthread_cond_signal(&pcond);
         }
+        pthread_mutex_unlock(&mutex_push);
+        printf("thread id:%d create array\n", id);
+        sleep(1);
+        pthread_cond_signal(&pcond);
     }
 
     return arg;
@@ -53,9 +53,9 @@ void* consumer(void * arg){
     while(true){
         pthread_mutex_lock(&mutex_con);
         pthread_cond_wait(&pcond, &mutex_con);
+        
+        pthread_mutex_lock(&mutex_pop);
         if(!qu.empty()){
-
-            pthread_mutex_lock(&mutex_pop);
             int* arr = qu.front();
             qu.pop();
             pthread_mutex_unlock(&mutex_pop);
@@ -78,6 +78,9 @@ void* consumer(void * arg){
             }
             printf("\n");
             free(arr);
+        }
+        else{
+            pthread_mutex_unlock(&mutex_pop);
         }
         pthread_mutex_unlock(&mutex_con);
     }
