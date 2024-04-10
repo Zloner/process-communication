@@ -29,6 +29,15 @@ int* createArr(int th_id){
     return arr;
 }
 
+int randomsecond(){
+    int time_t = 1;
+    srand((unsigned)time(NULL));
+    while((rand() & 0xFFFF) < (0.5 * 0xFFFF)){
+        time_t++;
+    }
+    return time_t < 10 ? time_t : 10;
+}
+
 void* producer(void* arg){
     int id = (long int)arg;
     printf("thread(producer) %d start.\n", id);
@@ -42,7 +51,9 @@ void* producer(void* arg){
         pthread_mutex_unlock(&mutex_push);
 
         printf("thread id:%d create array\n", id);
-        sleep(1);
+        int time_t = randomsecond();
+        printf("sleep %ds\n", time_t);
+        sleep(time_t);
         pthread_cond_signal(&pcond);
     }
 
