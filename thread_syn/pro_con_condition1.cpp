@@ -10,14 +10,65 @@
 using namespace std;
 
 #define MAX_QUEUE_SIZE 9
+#define QUEUE_MAX_LENGTH 9
 
-queue<int*> qu;
+template <class T>
+class Queue{
+private:
+    T* m_data;
+    int m_head;
+    int m_end;
+    int m_size;
+public:
+    Queue():m_head(0), m_end(0), m_size(0){
+        m_data = (T*)malloc(sizeof(T) * QUEUE_MAX_LENGTH);
+        memset(m_data, 0, QUEUE_MAX_LENGTH);
+    }
+    ~Queue(){
+        m_head = 0; 
+        m_end = 0; 
+        m_size = 0;
+        if(m_data != NULL)
+            free(m_data);
+    }
+    int Qsize(){
+        return m_size;
+    }
+    bool Qempty(){
+        return !m_size;
+    }
+    void Qpush(T x){
+        if(m_size >= QUEUE_MAX_LENGTH){
+            printf("queue is full\n");
+            return;
+        }
+        m_data[m_end] = x;
+        m_end = (m_end + 1) % QUEUE_MAX_LENGTH;
+        m_size++;
+    }
+    void Qpop(){
+        if(m_size == 0){
+            printf("queue is empty\n");
+            return;
+        }
+        m_head = (m_head + 1) % QUEUE_MAX_LENGTH;
+        m_size--;
+    }
+    T Qfront(){
+        if(m_size == 0){
+            printf("queue is empty\n");
+            return NULL;
+        }
+        return m_data[m_head];
+    }
+};
+
+Queue<int*> qu;
 pthread_cond_t pcond = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t mutex_push = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_pop = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_con = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_wf = PTHREAD_MUTEX_INITIALIZER;
-
 
 int* createArr(int th_id){
     int * arr = (int*)malloc(sizeof(int) * 5);
@@ -29,10 +80,10 @@ int* createArr(int th_id){
     return arr;
 }
 
-int randomsecond(){
+int randomsecond(int id){
     int time_t = 1;
-    srand((unsigned)time(NULL));
-    while((rand() & 0xFFFF) < (0.5 * 0xFFFF)){
+    srand((unsigned)time(NULL) * id);
+    while((rand() & 0xFFFF) < (0.20 * 0xFFFF)){
         time_t++;
     }
     return time_t < 10 ? time_t : 10;
@@ -44,17 +95,17 @@ void* producer(void* arg){
     while(true){
         int* arr = createArr(id);
 
-        pthread_mutex_lock(&mutex_push);
-        if(qu.size() < MAX_QUEUE_SIZE){    
-            qu.push(arr);
+        if(qu.Qsize() < MAX_QUEUE_SIZE){ 
+            pthread_mutex_lock(&mutex_push);
+            qu.Qpush(arr);
+            pthread_mutex_unlock(&mutex_push);
+            pthread_cond_signal(&pcond);
         }
-        pthread_mutex_unlock(&mutex_push);
 
         printf("thread id:%d create array\n", id);
-        int time_t = randomsecond();
+        int time_t = 1; //randomsecond(id);
         printf("sleep %ds\n", time_t);
         sleep(time_t);
-        pthread_cond_signal(&pcond);
     }
 
     return arg;
@@ -68,12 +119,12 @@ void* consumer(void * arg){
         pthread_mutex_lock(&mutex_con);
         pthread_cond_wait(&pcond, &mutex_con);
         
-        pthread_mutex_lock(&mutex_pop);
-        if(!qu.empty()){
-            arr = qu.front();
-            qu.pop();
+        if(!qu.Qempty()){
+            pthread_mutex_lock(&mutex_pop);
+            arr = qu.Qfront();
+            qu.Qpop();
+            pthread_mutex_unlock(&mutex_pop);
         }
-        pthread_mutex_unlock(&mutex_pop);
 
         if(arr != NULL){
             sort(arr, arr + 5, greater<int>());
@@ -95,6 +146,9 @@ void* consumer(void * arg){
             printf("\n");
             free(arr);
         }
+        else{
+            printf("queue is empty\n");
+        }
         pthread_mutex_unlock(&mutex_con);
     }
     return arg;
@@ -107,7 +161,7 @@ int main(){
     fclose(f);
 
     idt.resize(5);
-    for(int i = 0; i < 2; i++){
+    for(int i = 0; i < 3; i++){
         res = pthread_create(&idt[i], 0, producer, (void*)i);
         if(res == -1){
             perror("pthread create");
@@ -115,7 +169,7 @@ int main(){
         }
     }
 
-    for(int i = 2; i < 5; i++){
+    for(int i = 3; i < 5; i++){
         res = pthread_create(&idt[i], 0, consumer, (void*)i);
         if(res == -1){
             perror("pthread create");

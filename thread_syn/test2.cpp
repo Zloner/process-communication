@@ -32,27 +32,37 @@ public:
             free(m_data);
     }
     int Qsize(){
+        //lock
         return m_size;
+        //unlock
     }
     bool Qempty(){
+        //lock
         return !m_size;
+        //unlock
     }
     void Qpush(T x){
+        //lock
         if(m_size >= QUEUE_MAX_LENGTH){
             printf("queue is full\n");
-            return;
+            wait
         }
+        m_size++;
+        //unlock
         m_data[m_end] = x;
         m_end = (m_end + 1) % QUEUE_MAX_LENGTH;
-        m_size++;
+        
     }
     void Qpop(){
+        //lock
         if(m_size == 0){
             printf("queue is empty\n");
-            return;
+            wait
         }
-        m_head = (m_head + 1) % QUEUE_MAX_LENGTH;
         m_size--;
+        //unlock
+        m_head = (m_head + 1) % QUEUE_MAX_LENGTH;
+        
     }
     T Qfront(){
         if(m_size == 0){
@@ -99,7 +109,7 @@ void* producer(void* arg){
     while(true){
         int* arr = createArr(id);
 
-        pthread_mutex_lock(&mutex_size);//push
+        //pthread_mutex_lock(&mutex_size);//push
         while(qu.Qsize() >= MAX_QUEUE_SIZE){
             pthread_mutex_lock(&mutex_qu_full);
             pthread_cond_wait(&queue_full, &mutex_qu_full);
@@ -110,7 +120,7 @@ void* producer(void* arg){
         //pthread_mutex_lock(&mutex_push);
         qu.Qpush(arr);
 
-        pthread_mutex_unlock(&mutex_size);
+       // pthread_mutex_unlock(&mutex_size);
 
         //pthread_mutex_unlock(&mutex_push);
 

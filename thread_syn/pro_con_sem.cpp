@@ -1,6 +1,6 @@
 #include <iostream>
 #include <vector>
-#include <queue>
+//#include <queue>
 #include <algorithm>
 #include <stdlib.h>
 #include <unistd.h>
@@ -9,13 +9,64 @@
 
 using namespace std;
 
-#define MAX_SIZE 9
+#define MAX_SIZE 10
+#define QUEUE_MAX_LENGTH 20
+
+template <class T>
+class Queue{
+private:
+    T* m_data;
+    int m_head;
+    int m_end;
+    int m_size;
+public:
+    Queue():m_head(0), m_end(0), m_size(0){
+        m_data = (T*)malloc(sizeof(T) * QUEUE_MAX_LENGTH);
+        memset(m_data, 0, QUEUE_MAX_LENGTH);
+    }
+    ~Queue(){
+        m_head = 0; 
+        m_end = 0; 
+        m_size = 0;
+        if(m_data != NULL)
+            free(m_data);
+    }
+    int Qsize(){
+        return m_size;
+    }
+    bool Qempty(){
+        return !m_size;
+    }
+    void Qpush(T x){
+        if(m_size >= QUEUE_MAX_LENGTH){
+            printf("queue is full\n");
+            return;
+        }
+        m_data[m_end] = x;
+        m_end = (m_end + 1) % QUEUE_MAX_LENGTH;
+    }
+    void Qpop(){
+        if(m_size == 0){
+            printf("queue is empty\n");
+            return;
+        }
+        m_head = (m_head + 1) % QUEUE_MAX_LENGTH;
+    }
+    T Qfront(){
+        if(m_size == 0){
+            printf("queue is empty\n");
+            return NULL;
+        }
+        return m_data[m_head];
+    }
+};
 
 sem_t product;
 pthread_mutex_t mutex_push = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_pop = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_wf = PTHREAD_MUTEX_INITIALIZER;
-queue<int*> qu;
+Queue<int*> qu;
+
 
 int* createArr(int th_id){
     int * arr = (int*)malloc(sizeof(int) * 5);
@@ -27,9 +78,9 @@ int* createArr(int th_id){
     return arr;
 }
 
-int randomsecond(){
+int randomsecond(int id){
     int time_v = 1;
-    srand((unsigned int)time(NULL));
+    srand((unsigned int)time(NULL) * id);
     while(rand() * 0xffff > 0.5 * 0xffff){
         time_v++;
     }
@@ -43,13 +94,13 @@ void* producer(void * arg){
         int * arr = createArr(id);
 
         pthread_mutex_lock(&mutex_push);
-        if(qu.size() < MAX_SIZE){
-            qu.push(arr);
+        if(qu.Qsize() < MAX_SIZE){
+            qu.Qpush(arr);
         }
         pthread_mutex_unlock(&mutex_push);
 
         printf("thread id:%d create array\n");
-        int time_v = randomsecond();
+        int time_v = randomsecond(id);
         sleep(time_v);
         sem_post(&product);
     }
@@ -64,9 +115,9 @@ void * consumer(void * arg){
         int * arr = NULL;
 
         pthread_mutex_lock(&mutex_pop);
-        if(!qu.empty()){
-            arr = qu.front();
-            qu.pop();
+        if(!qu.Qempty()){
+            arr = qu.Qfront();
+            qu.Qpop();
         }
         pthread_mutex_unlock(&mutex_pop);
 

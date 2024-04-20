@@ -10,8 +10,58 @@
 using namespace std;
 
 #define MAX_QUEUE_SIZE 9
+#define QUEUE_MAX_LENGTH 20
 
-queue<int*> qu;
+template <class T>
+class Queue{
+private:
+    T* m_data;
+    int m_head;
+    int m_end;
+    int m_size;
+public:
+    Queue():m_head(0), m_end(0), m_size(0){
+        m_data = (T*)malloc(sizeof(T) * QUEUE_MAX_LENGTH);
+        memset(m_data, 0, QUEUE_MAX_LENGTH);
+    }
+    ~Queue(){
+        m_head = 0; 
+        m_end = 0; 
+        m_size = 0;
+        if(m_data != NULL)
+            free(m_data);
+    }
+    int Qsize(){
+        return m_size;
+    }
+    bool Qempty(){
+        return !m_size;
+    }
+    void Qpush(T x){
+        if(m_size >= QUEUE_MAX_LENGTH){
+            printf("queue is full\n");
+            return;
+        }
+        m_data[m_end] = x;
+        m_end = (m_end + 1) % QUEUE_MAX_LENGTH;
+    }
+    void Qpop(){
+        if(m_size == 0){
+            printf("queue is empty\n");
+            return;
+        }
+        m_head = (m_head + 1) % QUEUE_MAX_LENGTH;
+    }
+    T Qfront(){
+        if(m_size == 0){
+            printf("queue is empty\n");
+            return NULL;
+        }
+        return m_data[m_head];
+    }
+};
+
+Queue<int*> qu;
 pthread_cond_t pcond = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t mutex_push = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_con = PTHREAD_MUTEX_INITIALIZER;
@@ -44,8 +94,8 @@ void* producer(void* arg){
         int* arr = createArr(id);
 
         pthread_mutex_lock(&mutex_push);
-        if(qu.size() < MAX_QUEUE_SIZE){
-            qu.push(arr);
+        if(qu.Qsize() < MAX_QUEUE_SIZE){
+            qu.Qpush(arr);
         }
         pthread_mutex_unlock(&mutex_push);
         
@@ -67,9 +117,9 @@ void* consumer(void * arg){
         pthread_cond_wait(&pcond, &mutex_con);
 
         pthread_mutex_lock(&mutex_pop);
-        if(!qu.empty()){
-            int* arr = qu.front();
-            qu.pop();
+        if(!qu.Qempty()){
+            int* arr = qu.Qfront();
+            qu.Qpop();
         }
         pthread_mutex_unlock(&mutex_pop);
 
